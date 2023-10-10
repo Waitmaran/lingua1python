@@ -1,0 +1,4 @@
+Long Integer abc,def,g #dsds
+Begin
+abc = 13 ; def = abc - 1 ; ghi=abc - def ; abc = ( - 5 * 1 )
+End

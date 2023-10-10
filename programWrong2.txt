@@ -1,0 +1,3 @@
+Long Integer abc,def,ghi
+Begin
+abc = 13 ; def = abc - 1 ; ghi=abc - def ; abc = ( - 5 * 1 )
