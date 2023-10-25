@@ -2,6 +2,8 @@ import enum
 import LexerExeption
 from prettytable import PrettyTable
 
+from SyntaxAnalyzer import SyntaxAnalyzer
+
 
 # Вариант 11
 
@@ -13,14 +15,15 @@ from prettytable import PrettyTable
 
 # <Описание вычислений> ::= Begin <Список присваиваний> End
 # <Список присваиваний>::= <Присваивание>|<Присваивание> <Список присваиваний>
+
 # <Присваивание> ::= <Идент> = <Выражение> ;
 # <Выражение> ::= <Ун.оп.> <Подвыражение> | <Подвыражение>
 # <Подвыражение> ::= ( <Выражение> ) | <Операнд> | <Подвыражение> <Бин.оп.> <Подвыражение>
+
 # <Ун.оп.> ::= "-"
 # <Бин.оп.> ::= "-" | "+" | "*" | "/"
 # <Операнд> ::= <Идент> | <Константа>
 # <Константа> ::= <Цифра> <Константа> | <Цифра>
-
 # <Идент> ::= <Буква> <Идент> | <Буква>
 
 class LanguageLexemes:
@@ -34,10 +37,16 @@ class LanguageLexemes:
     class LexemaType(enum.Enum):
         TYPE = 'Variable type'
         IDENTIFIER = 'Identifier'
-        BINARY_OPERATOR = 'Operator'
-        UNARY_OPERATOR = 'Operator'
         KEYWORD = 'Keyword'
         DELIMITER = 'Delimiter'
+        LEFTBRACKET = 'Left bracket'
+        RIGHTBRACKET = 'Right bracket'
+        ASSIGN = 'assign'
+        SEMICOLOM = 'Semicolon'
+        MINUS = 'Minus'
+        PLUS = 'Plus'
+        DIVIDE = "Divide"
+        MULTIPLY = "Multiply"
         CONST = "Const"
         LETTER = "Letter"
 
@@ -118,20 +127,33 @@ def stripLexemasAssignments(assignments, variabbles_lines_count):
     line = variabbles_lines_count
     indexOffset = 0
     for charIndex, char in enumerate(preparedText):
-        if char in LanguageLexemes.delimiters_in_assignments:
-            if buffer in LanguageLexemes.keywords:
+        if char in LanguageLexemes.delimiters_in_assignments or char in LanguageLexemes.binary_operators or char in LanguageLexemes.unary_operators:
+            if buffer in LanguageLexemes.variable_types:
+                lexemas.append(Lexema(LanguageLexemes.LexemaType.TYPE, buffer, line, charIndex - len(buffer) - indexOffset))
+            elif buffer in LanguageLexemes.keywords:
                 lexemas.append(Lexema(LanguageLexemes.LexemaType.KEYWORD, buffer, line, charIndex - len(buffer) - indexOffset))
-            elif buffer in LanguageLexemes.unary_operators:
-                lexemas.append(Lexema(LanguageLexemes.LexemaType.UNARY_OPERATOR, buffer, line, charIndex - len(buffer) - indexOffset))
-            elif buffer in LanguageLexemes.binary_operators:
-                lexemas.append(Lexema(LanguageLexemes.LexemaType.BINARY_OPERATOR, buffer, line, charIndex - len(buffer) - indexOffset))
             elif buffer.isnumeric():
                 lexemas.append(Lexema(LanguageLexemes.LexemaType.CONST, buffer, line, charIndex - len(buffer)- indexOffset))
             else:
                 if len(buffer) > 0:
                     lexemas.append(Lexema(LanguageLexemes.LexemaType.IDENTIFIER, buffer, line, charIndex - len(buffer) - indexOffset))
             buffer = ""
-            lexemas.append(Lexema(LanguageLexemes.LexemaType.DELIMITER, char.strip(), line, charIndex - len(buffer) - indexOffset))
+            if char.strip() == "(":
+                lexemas.append(Lexema(LanguageLexemes.LexemaType.LEFTBRACKET, char.strip(), line, charIndex - len(buffer) - indexOffset))
+            elif char.strip() == ")":
+                lexemas.append(Lexema(LanguageLexemes.LexemaType.RIGHTBRACKET, char.strip(), line, charIndex - len(buffer) - indexOffset))
+            elif char.strip() == "=":
+                lexemas.append(Lexema(LanguageLexemes.LexemaType.ASSIGN, char.strip(), line, charIndex - len(buffer) - indexOffset))
+            elif char.strip() == ";":
+                lexemas.append(Lexema(LanguageLexemes.LexemaType.SEMICOLOM, char.strip(), line, charIndex - len(buffer) - indexOffset))
+            elif char.strip() == "+":
+                lexemas.append(Lexema(LanguageLexemes.LexemaType.PLUS, char.strip(), line, charIndex - len(buffer) - indexOffset))
+            elif char.strip() == "-":
+                lexemas.append(Lexema(LanguageLexemes.LexemaType.MINUS, char.strip(), line, charIndex - len(buffer) - indexOffset))
+            elif char.strip() == "*":
+                lexemas.append(Lexema(LanguageLexemes.LexemaType.MULTIPLY, char.strip(), line, charIndex - len(buffer) - indexOffset))
+            elif char.strip() == "/":
+                lexemas.append(Lexema(LanguageLexemes.LexemaType.DIVIDE, char.strip(), line, charIndex - len(buffer) - indexOffset))
             if char == "\n":
                 line += 1
                 indexOffset = charIndex+1
@@ -140,10 +162,8 @@ def stripLexemasAssignments(assignments, variabbles_lines_count):
     if len(buffer) > 0:
         if buffer in LanguageLexemes.keywords:
             lexemas.append(Lexema(LanguageLexemes.LexemaType.KEYWORD, buffer, line, len(preparedText) - len(buffer) - indexOffset))
-        elif buffer in LanguageLexemes.unary_operators:
-            lexemas.append(Lexema(LanguageLexemes.LexemaType.UNARY_OPERATOR, buffer, line, len(preparedText) - len(buffer) - indexOffset))
-        elif buffer in LanguageLexemes.binary_operators:
-            lexemas.append(Lexema(LanguageLexemes.LexemaType.BINARY_OPERATOR, buffer, line, len(preparedText) - len(buffer) - indexOffset))
+        elif buffer in LanguageLexemes.variable_types:
+            lexemas.append(Lexema(LanguageLexemes.LexemaType.TYPE, buffer, line, len(preparedText) - len(buffer) - indexOffset))
         elif buffer.isnumeric():
             lexemas.append(Lexema(LanguageLexemes.LexemaType.CONST, buffer, line, len(preparedText) - len(buffer) - indexOffset))
         else:
@@ -161,6 +181,9 @@ if __name__ == '__main__':
         lexemes = stripLexemasVariable(variables)
         lexemes.extend(stripLexemasAssignments(assignments, len(variables.split("\n"))))
         build_and_print_lexemes_table(lexemes)
+        
+        SyntaxAnalyzer().set_lexemes(lexemes).check_grammar()
+        
     else:
         if "Begin" not in text:
             raise LexerExeption.LexerMissingLexem("Begin")
