@@ -2,6 +2,16 @@ import enum
 
 from SyntaxException import *
 
+class Lexema:
+    def __init__(self, type, value, line, lexIndex):
+        self.type = type
+        self.value = value
+        self.line = line
+        self.lexIndex = lexIndex
+
+    def __str__(self):
+        return str(self.type) + "|" + str(self.value)
+
 class SyntaxAnalyzer():
     class LexemaType(enum.Enum):
         TYPE = 'Variable type'
@@ -18,13 +28,15 @@ class SyntaxAnalyzer():
         MULTIPLY = "Multiply"
         CONST = "Const"
         LETTER = "Letter"
+        OPERAND = "Operand"
+        DECLARATION = "Declaration"
     
     def set_lexemes(self, lexemes):
         self.lexemes = lexemes
         return self
     
     def check_grammar(self):
-        return self.__check_Variables_Declaration() and self.__check_Assignments()
+        return self.__check_Variables_Declaration() + self.__check_Assignments()
     
     def __check_Variables_Declaration(self):
         return self.__check_Variable_Type() and self.__check_Variable_List()
@@ -50,10 +62,12 @@ class SyntaxAnalyzer():
     
     def __check_Variable_List(self):
         identifier_flag = False
+        toPassForSemantic = []
         for lexema in self.lexemes:
             if lexema.type.name == self.LexemaType.IDENTIFIER.name:
                 if not identifier_flag:
                     identifier_flag = True
+                    toPassForSemantic.append(Lexema(self.LexemaType.DECLARATION, lexema.value, lexema.line, lexema.lexIndex))
                 else:
                     raise SyntaxExceptionUnexpectedLexem(lexema.line, lexema.lexIndex, lexema.value, ["COMMA"], lexema.type.name)
             elif lexema.type.name == self.LexemaType.DELIMITER.name:
@@ -68,10 +82,11 @@ class SyntaxAnalyzer():
                     raise SyntaxExceptionUnexpectedLexem(lexema.line, lexema.lexIndex, lexema.value, [self.LexemaType.IDENTIFIER.name], lexema.type.name)
                 break   
         
-        return True
+        return toPassForSemantic
 
     def __check_Assignments(self):
         buffer = self.lexemes
+        toPassForSemantic = []
        
         begin_index = -1
         for i, lexema in enumerate(buffer):
@@ -104,9 +119,11 @@ class SyntaxAnalyzer():
                     case self.LexemaType.IDENTIFIER.name:
                         if not OPERAND_FLAG:
                             rule += " " + currentLexema.type.name
+                            toPassForSemantic.append(Lexema(self.LexemaType.IDENTIFIER, currentLexema.value, currentLexema.line, currentLexema.lexIndex))
                             expectedType = [self.LexemaType.ASSIGN.name]
                         else:
                             rule += " OPERAND"
+                            toPassForSemantic.append(Lexema(self.LexemaType.OPERAND, currentLexema.value, currentLexema.line, currentLexema.lexIndex))
                             expectedType = [self.LexemaType.PLUS.name,
                                             self.LexemaType.MINUS.name,
                                             self.LexemaType.DIVIDE.name,
@@ -115,6 +132,7 @@ class SyntaxAnalyzer():
                                             self.LexemaType.RIGHTBRACKET.name]
                     case self.LexemaType.ASSIGN.name:
                         rule += " " + currentLexema.type.name
+                        toPassForSemantic.append(Lexema(self.LexemaType.ASSIGN, currentLexema.value, currentLexema.line, currentLexema.lexIndex))
                         OPERAND_FLAG = True
                         expectedType = [self.LexemaType.MINUS.name,
                                         self.LexemaType.IDENTIFIER.name, 
@@ -122,6 +140,7 @@ class SyntaxAnalyzer():
                                         self.LexemaType.LEFTBRACKET.name]
                     case self.LexemaType.PLUS.name:
                         rule += " BIN.OPERATOR"
+                        toPassForSemantic.append(Lexema(self.LexemaType.PLUS, currentLexema.value, currentLexema.line, currentLexema.lexIndex))
                         expectedType = [self.LexemaType.IDENTIFIER.name, 
                                         self.LexemaType.CONST.name,
                                         self.LexemaType.LEFTBRACKET.name]
@@ -129,23 +148,28 @@ class SyntaxAnalyzer():
                         rules = rule.split(' ')
                         if rules[len(rules)-1] == "OPERAND":
                             rule += " BINARY.OPERATOR"
+                            toPassForSemantic.append(Lexema(self.LexemaType.MINUS, currentLexema.value, currentLexema.line, currentLexema.lexIndex))
                         else:
                             rule += " UNARY.OPERATOR"
+                            toPassForSemantic.append(Lexema(self.LexemaType.MINUS, currentLexema.value, currentLexema.line, currentLexema.lexIndex))
                         expectedType = [self.LexemaType.IDENTIFIER.name, 
                                         self.LexemaType.CONST.name,
                                         self.LexemaType.LEFTBRACKET.name]
                     case self.LexemaType.DIVIDE.name:
                         rule += " BIN.OPERATOR"
+                        toPassForSemantic.append(Lexema(self.LexemaType.DIVIDE, currentLexema.value, currentLexema.line, currentLexema.lexIndex))
                         expectedType = [self.LexemaType.IDENTIFIER.name, 
                                         self.LexemaType.CONST.name,
                                         self.LexemaType.LEFTBRACKET.name]
                     case self.LexemaType.MULTIPLY.name:
                         rule += " BIN.OPERATOR"
+                        toPassForSemantic.append(Lexema(self.LexemaType.MULTIPLY, currentLexema.value, currentLexema.line, currentLexema.lexIndex))
                         expectedType = [self.LexemaType.IDENTIFIER.name, 
                                         self.LexemaType.CONST.name,
                                         self.LexemaType.LEFTBRACKET.name]
                     case self.LexemaType.CONST.name:
                         rule += " OPERAND"
+                        toPassForSemantic.append(Lexema(self.LexemaType.CONST, currentLexema.value, currentLexema.line, currentLexema.lexIndex))
                         expectedType = [self.LexemaType.SEMICOLOM.name,
                                         self.LexemaType.PLUS.name,
                                         self.LexemaType.MINUS.name,
@@ -154,6 +178,7 @@ class SyntaxAnalyzer():
                                         self.LexemaType.RIGHTBRACKET.name]
                     case self.LexemaType.SEMICOLOM.name:
                         rule += " " + currentLexema.type.name
+                        toPassForSemantic.append(Lexema(self.LexemaType.SEMICOLOM, currentLexema.value, currentLexema.line, currentLexema.lexIndex))
                         print(rule)
                         print()  
                         rule = "Rule: " 
@@ -163,6 +188,7 @@ class SyntaxAnalyzer():
                         expectedType = [self.LexemaType.IDENTIFIER.name]
                     case self.LexemaType.LEFTBRACKET.name:
                         rule += " " + currentLexema.type.name
+                        toPassForSemantic.append(Lexema(self.LexemaType.LEFTBRACKET, currentLexema.value, currentLexema.line, currentLexema.lexIndex))
                         if OPEN_BRACKET_FLAG:
                             raise SyntaxExceptionRightBracket(currentLexema.line, currentLexema.lexIndex, currentLexema.value)
                         else:
@@ -172,6 +198,7 @@ class SyntaxAnalyzer():
                                         self.LexemaType.CONST.name]
                     case self.LexemaType.RIGHTBRACKET.name:
                         rule += " " + currentLexema.type.name
+                        toPassForSemantic.append(Lexema(self.LexemaType.RIGHTBRACKET, currentLexema.value, currentLexema.line, currentLexema.lexIndex))
                         if OPEN_BRACKET_FLAG:
                             expectedType = [self.LexemaType.SEMICOLOM.name,
                                             self.LexemaType.PLUS.name,
@@ -181,7 +208,7 @@ class SyntaxAnalyzer():
                             OPEN_BRACKET_FLAG = False
                         else:
                             raise SyntaxExceptionLeftBracket(currentLexema.line, currentLexema.lexIndex, currentLexema.value)         
-        return True
+        return toPassForSemantic
         
     
 

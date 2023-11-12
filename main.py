@@ -1,6 +1,7 @@
 import enum
 import LexerExeption
 from prettytable import PrettyTable
+from SemanticAnalyzer import SemanticAnalyzer
 
 from SyntaxAnalyzer import SyntaxAnalyzer
 
@@ -182,7 +183,9 @@ if __name__ == '__main__':
         lexemes.extend(stripLexemasAssignments(assignments, len(variables.split("\n"))))
         build_and_print_lexemes_table(lexemes)
         
-        SyntaxAnalyzer().set_lexemes(lexemes).check_grammar()
+        forSemantic = SyntaxAnalyzer().set_lexemes(lexemes).check_grammar()
+        if (SemanticAnalyzer.Analyze(forSemantic)):
+            print("УСПЕШНО")
         
     else:
         if "Begin" not in text:
