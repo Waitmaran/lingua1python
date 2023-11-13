@@ -184,8 +184,11 @@ if __name__ == '__main__':
         build_and_print_lexemes_table(lexemes)
         
         forSemantic = SyntaxAnalyzer().set_lexemes(lexemes).check_grammar()
-        if (SemanticAnalyzer.Analyze(forSemantic)):
+        semAnalyzer = SemanticAnalyzer(forSemantic)
+        if (semAnalyzer.Analyze()):
             print("УСПЕШНО")
+            
+        semAnalyzer.ToTargetLanguage()
         
     else:
         if "Begin" not in text:

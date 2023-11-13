@@ -39,13 +39,15 @@ class SyntaxAnalyzer():
         return self.__check_Variables_Declaration() + self.__check_Assignments()
     
     def __check_Variables_Declaration(self):
-        return self.__check_Variable_Type() and self.__check_Variable_List()
+        return self.__check_Variable_Type() + self.__check_Variable_List()
     
     def __check_Variable_Type(self):
         buffer = None
+        toPassSemantic = []
         wrong_place_flag = False
         for lexema in self.lexemes:
             if lexema.type.name == self.LexemaType.TYPE.name:
+                toPassSemantic.append(lexema)
                 if wrong_place_flag:
                     raise SyntaxExceptionWrongPlace(lexema.line, lexema.lexIndex, lexema.value)
                 elif buffer == None:
@@ -58,7 +60,7 @@ class SyntaxAnalyzer():
             elif lexema.type.name != self.LexemaType.DELIMITER.name:
                 wrong_place_flag = True
                 
-        return True
+        return toPassSemantic
     
     def __check_Variable_List(self):
         identifier_flag = False
@@ -80,6 +82,7 @@ class SyntaxAnalyzer():
             elif lexema.type.name == self.LexemaType.KEYWORD.name: 
                 if not identifier_flag:
                     raise SyntaxExceptionUnexpectedLexem(lexema.line, lexema.lexIndex, lexema.value, [self.LexemaType.IDENTIFIER.name], lexema.type.name)
+                toPassForSemantic.append(Lexema(self.LexemaType.KEYWORD, lexema.value, lexema.line, lexema.lexIndex))
                 break   
         
         return toPassForSemantic
@@ -207,7 +210,8 @@ class SyntaxAnalyzer():
                                             self.LexemaType.MULTIPLY.name,]  
                             OPEN_BRACKET_FLAG = False
                         else:
-                            raise SyntaxExceptionLeftBracket(currentLexema.line, currentLexema.lexIndex, currentLexema.value)         
+                            raise SyntaxExceptionLeftBracket(currentLexema.line, currentLexema.lexIndex, currentLexema.value)      
+        toPassForSemantic.append(Lexema(self.LexemaType.KEYWORD, "End", currentLexema.line, currentLexema.lexIndex+1))   
         return toPassForSemantic
         
     
